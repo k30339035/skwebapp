@@ -103,6 +103,55 @@ body {
     width: 100%;
 }
 
+.sound-controls {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.sound-btn {
+    background: rgba(0, 240, 255, 0.1);
+    border: 1px solid rgba(0, 240, 255, 0.3);
+    color: var(--primary-color);
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: var(--transition);
+    position: relative;
+    overflow: hidden;
+}
+
+.sound-btn:hover {
+    background: rgba(0, 240, 255, 0.2);
+    border-color: var(--primary-color);
+    transform: scale(1.05);
+}
+
+.sound-btn.muted {
+    background: rgba(255, 0, 110, 0.1);
+    border-color: rgba(255, 0, 110, 0.3);
+    color: var(--accent-color);
+    opacity: 0.5;
+}
+
+.sound-btn.muted::after {
+    content: '';
+    position: absolute;
+    width: 2px;
+    height: 30px;
+    background: var(--accent-color);
+    transform: rotate(45deg);
+}
+
+.sound-btn svg {
+    position: relative;
+    z-index: 1;
+}
+
 /* ========================================
    Hero Section
    ======================================== */
@@ -641,13 +690,20 @@ body {
     }
 
     .nav-content {
-        flex-direction: column;
+        flex-wrap: wrap;
         gap: 1rem;
+        justify-content: space-between;
     }
 
     .nav-links {
         flex-wrap: wrap;
         justify-content: center;
+        order: 3;
+        width: 100%;
+    }
+
+    .sound-controls {
+        order: 2;
     }
 
     .footer-content {

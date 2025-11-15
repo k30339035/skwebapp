@@ -2,13 +2,252 @@
 // Slice Game - Main JavaScript
 // ========================================
 
+// ========================================
+// Audio System - Web Audio API
+// ========================================
+class AudioSystem {
+    constructor() {
+        this.audioContext = null;
+        this.musicEnabled = true;
+        this.sfxEnabled = true;
+        this.musicGainNode = null;
+        this.sfxGainNode = null;
+        this.musicOscillators = [];
+        this.isPlaying = false;
+    }
+
+    init() {
+        // Create AudioContext on user interaction
+        this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+        // Create gain nodes for volume control
+        this.musicGainNode = this.audioContext.createGain();
+        this.musicGainNode.gain.value = 0.3;
+        this.musicGainNode.connect(this.audioContext.destination);
+
+        this.sfxGainNode = this.audioContext.createGain();
+        this.sfxGainNode.gain.value = 0.4;
+        this.sfxGainNode.connect(this.audioContext.destination);
+    }
+
+    // Ambient background music using oscillators
+    startBackgroundMusic() {
+        if (!this.audioContext) this.init();
+        if (this.isPlaying || !this.musicEnabled) return;
+
+        this.isPlaying = true;
+        const now = this.audioContext.currentTime;
+
+        // Create atmospheric pad sound
+        const frequencies = [220, 277, 330, 440]; // A3, C#4, E4, A4 (ambient chord)
+
+        frequencies.forEach((freq, index) => {
+            const osc = this.audioContext.createOscillator();
+            const gainNode = this.audioContext.createGain();
+
+            osc.type = 'sine';
+            osc.frequency.value = freq;
+
+            // Fade in and create variations
+            gainNode.gain.setValueAtTime(0, now);
+            gainNode.gain.linearRampToValueAtTime(0.02, now + 2 + index * 0.5);
+
+            // Add subtle vibrato
+            const lfo = this.audioContext.createOscillator();
+            const lfoGain = this.audioContext.createGain();
+            lfo.frequency.value = 0.5;
+            lfoGain.gain.value = 2;
+
+            lfo.connect(lfoGain);
+            lfoGain.connect(osc.frequency);
+            lfo.start(now);
+
+            osc.connect(gainNode);
+            gainNode.connect(this.musicGainNode);
+            osc.start(now);
+
+            this.musicOscillators.push({ osc, gainNode, lfo });
+        });
+    }
+
+    stopBackgroundMusic() {
+        if (!this.isPlaying) return;
+
+        const now = this.audioContext.currentTime;
+
+        this.musicOscillators.forEach(({ osc, gainNode, lfo }) => {
+            gainNode.gain.linearRampToValueAtTime(0, now + 1);
+            osc.stop(now + 1);
+            lfo.stop(now + 1);
+        });
+
+        this.musicOscillators = [];
+        this.isPlaying = false;
+    }
+
+    // Sound effects
+    playHoverSound() {
+        if (!this.sfxEnabled || !this.audioContext) return;
+
+        const now = this.audioContext.currentTime;
+        const osc = this.audioContext.createOscillator();
+        const gainNode = this.audioContext.createGain();
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(800, now);
+        osc.frequency.exponentialRampToValueAtTime(1200, now + 0.1);
+
+        gainNode.gain.setValueAtTime(0.1, now);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+
+        osc.connect(gainNode);
+        gainNode.connect(this.sfxGainNode);
+
+        osc.start(now);
+        osc.stop(now + 0.1);
+    }
+
+    playClickSound() {
+        if (!this.sfxEnabled || !this.audioContext) return;
+
+        const now = this.audioContext.currentTime;
+        const osc = this.audioContext.createOscillator();
+        const gainNode = this.audioContext.createGain();
+
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(600, now);
+        osc.frequency.exponentialRampToValueAtTime(200, now + 0.15);
+
+        gainNode.gain.setValueAtTime(0.15, now);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+
+        osc.connect(gainNode);
+        gainNode.connect(this.sfxGainNode);
+
+        osc.start(now);
+        osc.stop(now + 0.15);
+    }
+
+    playSuccessSound() {
+        if (!this.sfxEnabled || !this.audioContext) return;
+
+        const now = this.audioContext.currentTime;
+
+        // Play a pleasant chord
+        [523.25, 659.25, 783.99].forEach((freq, index) => {
+            const osc = this.audioContext.createOscillator();
+            const gainNode = this.audioContext.createGain();
+
+            osc.type = 'sine';
+            osc.frequency.value = freq;
+
+            gainNode.gain.setValueAtTime(0, now + index * 0.05);
+            gainNode.gain.linearRampToValueAtTime(0.1, now + index * 0.05 + 0.01);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+
+            osc.connect(gainNode);
+            gainNode.connect(this.sfxGainNode);
+
+            osc.start(now + index * 0.05);
+            osc.stop(now + 0.5);
+        });
+    }
+
+    playNotificationSound() {
+        if (!this.sfxEnabled || !this.audioContext) return;
+
+        const now = this.audioContext.currentTime;
+
+        [880, 1174.66].forEach((freq, index) => {
+            const osc = this.audioContext.createOscillator();
+            const gainNode = this.audioContext.createGain();
+
+            osc.type = 'sine';
+            osc.frequency.value = freq;
+
+            gainNode.gain.setValueAtTime(0.08, now + index * 0.1);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, now + index * 0.1 + 0.2);
+
+            osc.connect(gainNode);
+            gainNode.connect(this.sfxGainNode);
+
+            osc.start(now + index * 0.1);
+            osc.stop(now + index * 0.1 + 0.2);
+        });
+    }
+
+    toggleMusic() {
+        this.musicEnabled = !this.musicEnabled;
+
+        if (this.musicEnabled) {
+            this.startBackgroundMusic();
+        } else {
+            this.stopBackgroundMusic();
+        }
+
+        return this.musicEnabled;
+    }
+
+    toggleSFX() {
+        this.sfxEnabled = !this.sfxEnabled;
+        return this.sfxEnabled;
+    }
+}
+
+// Global audio system instance
+const audioSystem = new AudioSystem();
+
 document.addEventListener('DOMContentLoaded', () => {
+    initAudioControls();
     initScrollAnimations();
     initNavbarScroll();
     initButtonEffects();
     initGameCards();
     initSmoothScroll();
+
+    // Auto-start background music after first user interaction
+    document.body.addEventListener('click', () => {
+        if (!audioSystem.audioContext) {
+            audioSystem.init();
+            audioSystem.startBackgroundMusic();
+        }
+    }, { once: true });
 });
+
+// ========================================
+// Audio Controls
+// ========================================
+function initAudioControls() {
+    const musicToggle = document.getElementById('musicToggle');
+    const sfxToggle = document.getElementById('sfxToggle');
+
+    if (musicToggle) {
+        musicToggle.addEventListener('click', () => {
+            const enabled = audioSystem.toggleMusic();
+            musicToggle.classList.toggle('muted', !enabled);
+
+            if (enabled) {
+                showNotification('배경 음악이 켜졌습니다', 'success');
+            } else {
+                showNotification('배경 음악이 꺼졌습니다', 'info');
+            }
+        });
+    }
+
+    if (sfxToggle) {
+        sfxToggle.addEventListener('click', () => {
+            const enabled = audioSystem.toggleSFX();
+            sfxToggle.classList.toggle('muted', !enabled);
+
+            if (enabled) {
+                audioSystem.playSuccessSound();
+                showNotification('효과음이 켜졌습니다', 'success');
+            } else {
+                showNotification('효과음이 꺼졌습니다', 'info');
+            }
+        });
+    }
+}
 
 // ========================================
 // Scroll Animations
@@ -66,14 +305,24 @@ function initNavbarScroll() {
 function initButtonEffects() {
     const playButtons = document.querySelectorAll('.btn-play');
     const wishlistButton = document.querySelector('.btn-wishlist');
+    const allButtons = document.querySelectorAll('.btn, .sound-btn');
+
+    // Add hover sound to all buttons
+    allButtons.forEach(button => {
+        button.addEventListener('mouseenter', () => {
+            audioSystem.playHoverSound();
+        });
+    });
 
     playButtons.forEach(button => {
         button.addEventListener('click', (e) => {
             e.preventDefault();
+            audioSystem.playClickSound();
             createRipple(e, button);
 
             // Simulate game launch
             setTimeout(() => {
+                audioSystem.playNotificationSound();
                 showNotification('게임을 준비하고 있습니다...', 'info');
             }, 300);
         });
@@ -82,9 +331,11 @@ function initButtonEffects() {
     if (wishlistButton) {
         wishlistButton.addEventListener('click', (e) => {
             e.preventDefault();
+            audioSystem.playClickSound();
             createRipple(e, wishlistButton);
 
             setTimeout(() => {
+                audioSystem.playSuccessSound();
                 showNotification('위시리스트에 추가되었습니다!', 'success');
                 wishlistButton.innerHTML = '✓ 위시리스트에 추가됨';
                 wishlistButton.style.background = 'rgba(0, 240, 255, 0.2)';
@@ -93,6 +344,17 @@ function initButtonEffects() {
             }, 300);
         });
     }
+
+    // Add sound to navigation links
+    const navLinks = document.querySelectorAll('.nav-links a, .footer-links a');
+    navLinks.forEach(link => {
+        link.addEventListener('mouseenter', () => {
+            audioSystem.playHoverSound();
+        });
+        link.addEventListener('click', () => {
+            audioSystem.playClickSound();
+        });
+    });
 }
 
 // ========================================
@@ -143,6 +405,7 @@ function initGameCards() {
     gameCards.forEach(card => {
         card.addEventListener('mouseenter', function() {
             this.style.zIndex = '10';
+            audioSystem.playHoverSound();
         });
 
         card.addEventListener('mouseleave', function() {
