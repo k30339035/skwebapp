@@ -131,6 +131,27 @@ body {
     transform: scale(1.05);
 }
 
+.sound-btn:active {
+    transform: scale(0.95);
+    background: rgba(0, 240, 255, 0.3);
+}
+
+.sound-btn.clicked {
+    animation: button-click 0.3s ease;
+}
+
+@keyframes button-click {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(0.9);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
 .sound-btn.muted {
     background: rgba(255, 0, 110, 0.1);
     border-color: rgba(255, 0, 110, 0.3);

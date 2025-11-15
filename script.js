@@ -17,17 +17,32 @@ class AudioSystem {
     }
 
     init() {
-        // Create AudioContext on user interaction
-        this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        try {
+            // Create AudioContext on user interaction
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            if (!AudioContext) {
+                console.error('Web Audio API is not supported in this browser');
+                return false;
+            }
 
-        // Create gain nodes for volume control
-        this.musicGainNode = this.audioContext.createGain();
-        this.musicGainNode.gain.value = 0.3;
-        this.musicGainNode.connect(this.audioContext.destination);
+            this.audioContext = new AudioContext();
+            console.log('AudioContext created successfully:', this.audioContext.state);
 
-        this.sfxGainNode = this.audioContext.createGain();
-        this.sfxGainNode.gain.value = 0.4;
-        this.sfxGainNode.connect(this.audioContext.destination);
+            // Create gain nodes for volume control
+            this.musicGainNode = this.audioContext.createGain();
+            this.musicGainNode.gain.value = 0.3;
+            this.musicGainNode.connect(this.audioContext.destination);
+
+            this.sfxGainNode = this.audioContext.createGain();
+            this.sfxGainNode.gain.value = 0.4;
+            this.sfxGainNode.connect(this.audioContext.destination);
+
+            console.log('Audio system initialized successfully');
+            return true;
+        } catch (error) {
+            console.error('Failed to initialize audio system:', error);
+            return false;
+        }
     }
 
     // Ambient background music using oscillators
@@ -221,31 +236,77 @@ function initAudioControls() {
     const musicToggle = document.getElementById('musicToggle');
     const sfxToggle = document.getElementById('sfxToggle');
 
+    console.log('Initializing audio controls...', { musicToggle, sfxToggle });
+
     if (musicToggle) {
-        musicToggle.addEventListener('click', () => {
+        musicToggle.addEventListener('click', (e) => {
+            e.stopPropagation();
+            console.log('🎵 Music toggle clicked');
+
+            // Visual feedback
+            musicToggle.classList.add('clicked');
+            setTimeout(() => musicToggle.classList.remove('clicked'), 300);
+
+            // Initialize audio context on first click
+            if (!audioSystem.audioContext) {
+                console.log('🔧 Initializing audio context...');
+                const success = audioSystem.init();
+                if (!success) {
+                    showNotification('❌ 오디오 시스템을 초기화할 수 없습니다', 'error');
+                    return;
+                }
+            }
+
             const enabled = audioSystem.toggleMusic();
             musicToggle.classList.toggle('muted', !enabled);
 
+            console.log('✅ Music enabled:', enabled);
+
             if (enabled) {
-                showNotification('배경 음악이 켜졌습니다', 'success');
+                showNotification('🎵 배경 음악이 켜졌습니다', 'success');
             } else {
-                showNotification('배경 음악이 꺼졌습니다', 'info');
+                showNotification('🔇 배경 음악이 꺼졌습니다', 'info');
             }
         });
+        console.log('✓ Music toggle listener added');
+    } else {
+        console.error('❌ Music toggle button not found!');
     }
 
     if (sfxToggle) {
-        sfxToggle.addEventListener('click', () => {
+        sfxToggle.addEventListener('click', (e) => {
+            e.stopPropagation();
+            console.log('🔊 SFX toggle clicked');
+
+            // Visual feedback
+            sfxToggle.classList.add('clicked');
+            setTimeout(() => sfxToggle.classList.remove('clicked'), 300);
+
+            // Initialize audio context on first click
+            if (!audioSystem.audioContext) {
+                console.log('🔧 Initializing audio context...');
+                const success = audioSystem.init();
+                if (!success) {
+                    showNotification('❌ 오디오 시스템을 초기화할 수 없습니다', 'error');
+                    return;
+                }
+            }
+
             const enabled = audioSystem.toggleSFX();
             sfxToggle.classList.toggle('muted', !enabled);
 
+            console.log('✅ SFX enabled:', enabled);
+
             if (enabled) {
                 audioSystem.playSuccessSound();
-                showNotification('효과음이 켜졌습니다', 'success');
+                showNotification('🔊 효과음이 켜졌습니다', 'success');
             } else {
-                showNotification('효과음이 꺼졌습니다', 'info');
+                showNotification('🔇 효과음이 꺼졌습니다', 'info');
             }
         });
+        console.log('✓ SFX toggle listener added');
+    } else {
+        console.error('❌ SFX toggle button not found!');
     }
 }
 
@@ -307,23 +368,38 @@ function initButtonEffects() {
     const wishlistButton = document.querySelector('.btn-wishlist');
     const allButtons = document.querySelectorAll('.btn, .sound-btn');
 
+    console.log('Initializing button effects...', {
+        playButtons: playButtons.length,
+        wishlistButton,
+        allButtons: allButtons.length
+    });
+
     // Add hover sound to all buttons
     allButtons.forEach(button => {
         button.addEventListener('mouseenter', () => {
-            audioSystem.playHoverSound();
+            if (audioSystem.audioContext) {
+                audioSystem.playHoverSound();
+            }
         });
     });
 
     playButtons.forEach(button => {
         button.addEventListener('click', (e) => {
             e.preventDefault();
+
+            // Initialize audio context on first interaction
+            if (!audioSystem.audioContext) {
+                audioSystem.init();
+                audioSystem.startBackgroundMusic();
+            }
+
             audioSystem.playClickSound();
             createRipple(e, button);
 
             // Simulate game launch
             setTimeout(() => {
                 audioSystem.playNotificationSound();
-                showNotification('게임을 준비하고 있습니다...', 'info');
+                showNotification('🎮 게임을 준비하고 있습니다...', 'info');
             }, 300);
         });
     });
@@ -331,12 +407,19 @@ function initButtonEffects() {
     if (wishlistButton) {
         wishlistButton.addEventListener('click', (e) => {
             e.preventDefault();
+
+            // Initialize audio context on first interaction
+            if (!audioSystem.audioContext) {
+                audioSystem.init();
+                audioSystem.startBackgroundMusic();
+            }
+
             audioSystem.playClickSound();
             createRipple(e, wishlistButton);
 
             setTimeout(() => {
                 audioSystem.playSuccessSound();
-                showNotification('위시리스트에 추가되었습니다!', 'success');
+                showNotification('⭐ 위시리스트에 추가되었습니다!', 'success');
                 wishlistButton.innerHTML = '✓ 위시리스트에 추가됨';
                 wishlistButton.style.background = 'rgba(0, 240, 255, 0.2)';
                 wishlistButton.style.borderColor = 'var(--primary-color)';
@@ -349,10 +432,14 @@ function initButtonEffects() {
     const navLinks = document.querySelectorAll('.nav-links a, .footer-links a');
     navLinks.forEach(link => {
         link.addEventListener('mouseenter', () => {
-            audioSystem.playHoverSound();
+            if (audioSystem.audioContext) {
+                audioSystem.playHoverSound();
+            }
         });
         link.addEventListener('click', () => {
-            audioSystem.playClickSound();
+            if (audioSystem.audioContext) {
+                audioSystem.playClickSound();
+            }
         });
     });
 }
@@ -402,10 +489,14 @@ document.head.appendChild(style);
 function initGameCards() {
     const gameCards = document.querySelectorAll('.game-card');
 
+    console.log('Initializing game cards...', gameCards.length);
+
     gameCards.forEach(card => {
         card.addEventListener('mouseenter', function() {
             this.style.zIndex = '10';
-            audioSystem.playHoverSound();
+            if (audioSystem.audioContext) {
+                audioSystem.playHoverSound();
+            }
         });
 
         card.addEventListener('mouseleave', function() {
